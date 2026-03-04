@@ -1,5 +1,7 @@
 # ull - UltraLogLog
 
+[![GoDoc](https://godoc.org/github.com/philpearl/ull?status.svg)](https://godoc.org/github.com/philpearl/ull)
+
 A Go implementation of UltraLogLog, a probabilistic cardinality estimation algorithm that improves upon HyperLogLog with better accuracy at the same memory cost.
 
 ## Installation
