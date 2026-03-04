@@ -197,7 +197,7 @@ func (u *UltraLogLog) UnmarshalBinary(data []byte) error {
 	}
 
 	precision := data[0]
-	if precision < 4 || precision > 18 {
+	if precision < 7 || precision > 18 {
 		return errors.New("invalid precision in data")
 	}
 
