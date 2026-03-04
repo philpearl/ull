@@ -56,10 +56,3 @@ loop128:
 
 done:
     RET
-
-cleanup:
-    // Clear upper bits of YMM registers to avoid SSE/AVX transition penalties
-    VZEROUPPER
-
-done:
-    RET
