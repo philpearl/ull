@@ -4,12 +4,13 @@
 
 // func mergeRegistersASM(dst, src *byte, length int)
 // Merges src into dst by taking element-wise maximum.
-// Uses AVX2 instructions to process 32 bytes at a time.
+// Uses AVX2 instructions to process 128 bytes at a time.
+// Length must be a multiple of 128 (which is guaranteed for precision >= 7).
 //
 // Arguments:
 //   dst+0(FP)    = dst pointer
 //   src+8(FP)    = src pointer  
-//   length+16(FP) = length
+//   length+16(FP) = length (must be multiple of 128)
 TEXT ·mergeRegistersASM(SB), NOSPLIT, $0-24
     MOVQ dst+0(FP), DI      // dst pointer
     MOVQ src+8(FP), SI      // src pointer
@@ -21,9 +22,6 @@ TEXT ·mergeRegistersASM(SB), NOSPLIT, $0-24
 
     // Process 128 bytes at a time (4 x 32-byte YMM registers)
 loop128:
-    CMPQ  CX, $128
-    JL    loop32
-
     // Load 128 bytes from dst into YMM0-YMM3
     VMOVDQU (DI), Y0
     VMOVDQU 32(DI), Y1
@@ -51,53 +49,13 @@ loop128:
     ADDQ  $128, DI
     ADDQ  $128, SI
     SUBQ  $128, CX
-    JMP   loop128
+    JNZ   loop128
 
-    // Process 32 bytes at a time
-loop32:
-    CMPQ  CX, $32
-    JL    loop16
+    // Clear upper bits of YMM registers to avoid SSE/AVX transition penalties
+    VZEROUPPER
 
-    VMOVDQU (DI), Y0
-    VMOVDQU (SI), Y1
-    VPMAXUB Y1, Y0, Y0
-    VMOVDQU Y0, (DI)
-    
-    ADDQ  $32, DI
-    ADDQ  $32, SI
-    SUBQ  $32, CX
-    JMP   loop32
-
-    // Process 16 bytes at a time using SSE
-loop16:
-    CMPQ  CX, $16
-    JL    loop1
-
-    VMOVDQU (DI), X0
-    VMOVDQU (SI), X1
-    VPMAXUB X1, X0, X0
-    VMOVDQU X0, (DI)
-    
-    ADDQ  $16, DI
-    ADDQ  $16, SI
-    SUBQ  $16, CX
-    JMP   loop16
-
-    // Process remaining bytes one at a time
-loop1:
-    TESTQ CX, CX
-    JZ    cleanup
-
-    MOVB  (DI), AL
-    MOVB  (SI), BL
-    CMPB  BL, AL
-    JBE   skip
-    MOVB  BL, (DI)
-skip:
-    INCQ  DI
-    INCQ  SI
-    DECQ  CX
-    JMP   loop1
+done:
+    RET
 
 cleanup:
     // Clear upper bits of YMM registers to avoid SSE/AVX transition penalties

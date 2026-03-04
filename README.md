@@ -50,7 +50,7 @@ func main() {
 ## Features
 
 - **High accuracy**: ~20% better accuracy than HyperLogLog
-- **Configurable precision**: 4-18 bits (16 bytes to 256KB)
+- **Configurable precision**: 7-18 bits (128 bytes to 256KB)
 - **Mergeable**: Combine multiple UltraLogLogs for distributed counting
 - **Serializable**: Binary marshaling for persistence
 - **Fast**: Sub-nanosecond Add operations for pre-hashed values

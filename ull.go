@@ -19,11 +19,11 @@ import (
 // the number of distinct elements added to it.
 type UltraLogLog struct {
 	registers []uint8
-	precision uint8 // Number of bits used for bucket indexing (typically 4-18)
+	precision uint8 // Number of bits used for bucket indexing (typically 7-18)
 }
 
 // New creates a new UltraLogLog with the specified precision.
-// Precision must be between 4 and 18 (inclusive).
+// Precision must be between 7 and 18 (inclusive).
 // Higher precision uses more memory but provides better accuracy.
 // Memory usage is 2^precision bytes.
 //
@@ -33,8 +33,8 @@ type UltraLogLog struct {
 //   - 14: 16KB memory, ~0.8125% standard error
 //   - 16: 64KB memory, ~0.406% standard error
 func New(precision uint8) (*UltraLogLog, error) {
-	if precision < 4 || precision > 18 {
-		return nil, errors.New("precision must be between 4 and 18")
+	if precision < 7 || precision > 18 {
+		return nil, errors.New("precision must be between 7 and 18")
 	}
 	m := uint32(1) << precision
 	return &UltraLogLog{
