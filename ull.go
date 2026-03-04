@@ -150,9 +150,7 @@ func (u *UltraLogLog) Merge(other *UltraLogLog) error {
 		return errors.New("cannot merge UltraLogLogs with different precisions")
 	}
 
-	for i, val := range other.registers {
-		u.registers[i] = max(u.registers[i], val)
-	}
+	mergeRegisters(u.registers, other.registers)
 
 	return nil
 }
