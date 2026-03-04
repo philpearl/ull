@@ -331,32 +331,82 @@ func TestUnmarshalErrors(t *testing.T) {
 	}
 }
 
-func TestGetAlpha(t *testing.T) {
+func TestRegisterValue(t *testing.T) {
 	tests := []struct {
-		m        uint32
-		expected float64
+		old      uint8
+		nlz      int
+		expected uint8
 	}{
-		{16, 0.673},
-		{32, 0.697},
-		{64, 0.709},
+		{old: 0, nlz: 0, expected: 1 << 2},
+		{old: 0, nlz: 1, expected: 2 << 2},
+		{old: 0, nlz: 2, expected: 3 << 2},
+		{old: 1 << 2, nlz: 1, expected: 2<<2 | 0b10},
+		{old: 1<<2 | 0b01, nlz: 1, expected: 2<<2 | 0b10},
+		{old: 1<<2 | 0b10, nlz: 1, expected: 2<<2 | 0b11},
+		{old: 1<<2 | 0b10, nlz: 0, expected: 1<<2 | 0b10},
 	}
 
 	for _, tt := range tests {
-		t.Run(fmt.Sprintf("m_%d", tt.m), func(t *testing.T) {
-			alpha := getAlpha(tt.m)
-			if alpha != tt.expected {
-				t.Errorf("alpha = %f, want %f", alpha, tt.expected)
+		t.Run(fmt.Sprintf("%b-%d", tt.old, tt.nlz), func(t *testing.T) {
+			result := registerValue(tt.old, tt.nlz)
+			if result != tt.expected {
+				t.Errorf("registerValue(%.8b, %d) = %.8b, want %.8b", tt.old, tt.nlz, result, tt.expected)
 			}
 		})
 	}
+}
 
-	// Test formula for m >= 128
-	for _, m := range []uint32{128, 256, 1024, 16384} {
-		t.Run(fmt.Sprintf("m_%d_formula", m), func(t *testing.T) {
-			alpha := getAlpha(m)
-			expected := 0.7213 / (1.0 + 1.079/float64(m))
-			if math.Abs(alpha-expected) > 1e-10 {
-				t.Errorf("alpha = %f, want %f", alpha, expected)
+func TestPack(t *testing.T) {
+	tests := []struct {
+		reg      uint64
+		expected uint8
+	}{
+		// {reg: 0x0000_0000_0000_0000, expected: 0b0000_0100}, // TODO: is this right??
+		{reg: 0x8000_0000_0000_0000, expected: 62 << 2},
+		{reg: 0xC000_0000_0000_0000, expected: 62<<2 | 0b10},
+		{reg: 0x4000_0000_0000_0000, expected: 61 << 2},
+		{reg: 0x2000_0000_0000_0000, expected: 60 << 2},
+		{reg: 0x1000_0000_0000_0000, expected: 59 << 2},
+		{reg: 0x0800_0000_0000_0000, expected: 58 << 2},
+		{reg: 0x0400_0000_0000_0000, expected: 57 << 2},
+		{reg: 0x0500_0000_0000_0000, expected: 57<<2 | 0b01},
+		{reg: 0x0600_0000_0000_0000, expected: 57<<2 | 0b10},
+		{reg: 0x0700_0000_0000_0000, expected: 57<<2 | 0b11},
+		{reg: 0x0000_0000_0000_0100, expected: 7 << 2},
+		{reg: 0x0000_0000_0000_0004, expected: 1 << 2},
+		{reg: 0x0000_0000_0000_0008, expected: 2 << 2},
+	}
+
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("%X", tt.reg), func(t *testing.T) {
+			result := pack(tt.reg)
+			if result != tt.expected {
+				t.Errorf("pack(%X) = %.8b, want %.8b", tt.reg, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestUnpack(t *testing.T) {
+	tests := []struct {
+		packed   uint8
+		expected uint64
+	}{
+		{packed: 0b0000_0000, expected: 0},
+		{packed: 62 << 2, expected: 0x8000_0000_0000_0000},
+		{packed: 62<<2 | 0b10, expected: 0xC000_0000_0000_0000},
+		{packed: 61 << 2, expected: 0x4000_0000_0000_0000},
+		{packed: 60 << 2, expected: 0x2000_0000_0000_0000},
+		{packed: 59 << 2, expected: 0x1000_0000_0000_0000},
+		{packed: 58 << 2, expected: 0x0800_0000_0000_0000},
+		{packed: 57 << 2, expected: 0x0400_0000_0000_0000},
+	}
+
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("%b", tt.packed), func(t *testing.T) {
+			result := unpack(tt.packed)
+			if result != tt.expected {
+				t.Errorf("unpack(%.8b) = %X, want %X", tt.packed, result, tt.expected)
 			}
 		})
 	}

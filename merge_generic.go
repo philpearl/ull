@@ -1,11 +1,16 @@
-//go:build !arm64 && !amd64
-
 package ull
 
-// mergeRegisters merges src into dst by taking element-wise maximum.
-// This is the pure Go implementation for non-ARM64 platforms.
+// mergeRegisters
 func mergeRegisters(dst, src []byte) {
 	for i, val := range src {
-		dst[i] = max(dst[i], val)
+		if val == 0 {
+			continue
+		}
+		dstVal := dst[i]
+		if dstVal == 0 {
+			dst[i] = val
+			continue
+		}
+		dst[i] = pack(unpack(val) | unpack(dstVal))
 	}
 }
