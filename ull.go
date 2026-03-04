@@ -150,9 +150,7 @@ func (u *UltraLogLog) Merge(other *UltraLogLog) error {
 	}
 
 	for i, val := range other.registers {
-		if val > u.registers[i] {
-			u.registers[i] = val
-		}
+		u.registers[i] = max(u.registers[i], val)
 	}
 
 	return nil
