@@ -12,8 +12,8 @@ func TestNew(t *testing.T) {
 		precision uint8
 		wantErr   bool
 	}{
-		{3, true},   // Too small
-		{4, false},  // Minimum valid
+		{6, true},   // Too small
+		{7, false},  // Minimum valid
 		{12, false}, // Common value
 		{18, false}, // Maximum valid
 		{19, true},  // Too large
