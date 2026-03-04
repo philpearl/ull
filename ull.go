@@ -7,10 +7,11 @@
 package ull
 
 import (
-	"encoding/binary"
 	"errors"
 	"math"
 	"math/bits"
+
+	"github.com/cespare/xxhash/v2"
 )
 
 // UltraLogLog is a probabilistic cardinality estimator.
@@ -69,14 +70,14 @@ func (u *UltraLogLog) Add(hash uint64) {
 	}
 }
 
-// AddBytes adds a byte slice to the UltraLogLog using an internal hash function.
+// AddBytes adds a byte slice to the UltraLogLog using xxhash.
 func (u *UltraLogLog) AddBytes(data []byte) {
-	u.Add(hash64(data))
+	u.Add(xxhash.Sum64(data))
 }
 
-// AddString adds a string to the UltraLogLog using an internal hash function.
+// AddString adds a string to the UltraLogLog using xxhash.
 func (u *UltraLogLog) AddString(s string) {
-	u.AddBytes([]byte(s))
+	u.Add(xxhash.Sum64String(s))
 }
 
 // Count returns the estimated cardinality of the set.
@@ -212,51 +213,4 @@ func (u *UltraLogLog) UnmarshalBinary(data []byte) error {
 	copy(u.registers, data[1:])
 
 	return nil
-}
-
-// hash64 computes a 64-bit hash of the input bytes.
-// Uses a simple but effective mixing function based on xxHash principles.
-func hash64(data []byte) uint64 {
-	const (
-		prime1 = 0x9E3779B185EBCA87
-		prime2 = 0xC2B2AE3D27D4EB4F
-		prime3 = 0x165667B19E3779F9
-		prime4 = 0x85EBCA77C2B2AE63
-		prime5 = 0x27D4EB2F165667C5
-	)
-
-	var h uint64 = prime5
-
-	// Process 8 bytes at a time
-	for len(data) >= 8 {
-		k := binary.LittleEndian.Uint64(data)
-		k *= prime2
-		k = bits.RotateLeft64(k, 31)
-		k *= prime1
-		h ^= k
-		h = bits.RotateLeft64(h, 27)*prime1 + prime4
-		data = data[8:]
-	}
-
-	// Process remaining bytes
-	for len(data) >= 4 {
-		k := uint64(binary.LittleEndian.Uint32(data))
-		h ^= k * prime1
-		h = bits.RotateLeft64(h, 23)*prime2 + prime3
-		data = data[4:]
-	}
-
-	for _, b := range data {
-		h ^= uint64(b) * prime5
-		h = bits.RotateLeft64(h, 11) * prime1
-	}
-
-	// Final avalanche
-	h ^= h >> 33
-	h *= prime2
-	h ^= h >> 29
-	h *= prime3
-	h ^= h >> 32
-
-	return h
 }

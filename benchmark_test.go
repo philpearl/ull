@@ -155,30 +155,3 @@ func BenchmarkUnmarshalBinary(b *testing.B) {
 		_ = ull2.UnmarshalBinary(data)
 	}
 }
-
-func BenchmarkHash64(b *testing.B) {
-	benchmarks := []struct {
-		name string
-		size int
-	}{
-		{"8_bytes", 8},
-		{"32_bytes", 32},
-		{"128_bytes", 128},
-		{"1024_bytes", 1024},
-	}
-
-	for _, bm := range benchmarks {
-		b.Run(bm.name, func(b *testing.B) {
-			data := make([]byte, bm.size)
-			for i := range data {
-				data[i] = byte(i)
-			}
-
-			b.ResetTimer()
-			b.ReportAllocs()
-			for b.Loop() {
-				_ = hash64(data)
-			}
-		})
-	}
-}

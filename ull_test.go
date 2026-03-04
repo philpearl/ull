@@ -331,34 +331,6 @@ func TestUnmarshalErrors(t *testing.T) {
 	}
 }
 
-func TestHash64(t *testing.T) {
-	// Test that different inputs produce different hashes
-	h1 := hash64([]byte("hello"))
-	h2 := hash64([]byte("world"))
-	h3 := hash64([]byte("hello"))
-
-	if h1 == h2 {
-		t.Error("different inputs should produce different hashes")
-	}
-
-	if h1 != h3 {
-		t.Error("same input should produce same hash")
-	}
-
-	// Test empty input
-	h4 := hash64([]byte{})
-	if h4 == 0 {
-		t.Error("hash of empty slice should not be 0")
-	}
-
-	// Test that hash is sensitive to small changes
-	h5 := hash64([]byte("hello"))
-	h6 := hash64([]byte("hellp"))
-	if h5 == h6 {
-		t.Error("hash should be sensitive to small changes")
-	}
-}
-
 func TestGetAlpha(t *testing.T) {
 	tests := []struct {
 		m        uint32
