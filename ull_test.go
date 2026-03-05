@@ -110,6 +110,9 @@ func TestCardinalityEstimation(t *testing.T) {
 		{"large_10000", 10000, 14, 0.03},
 		{"very_large_100000", 100000, 14, 0.02},
 		{"very_large_1000000", 1000000, 14, 0.02},
+		{"very_large_10000000", 10_000_000, 14, 0.02},
+		{"very_large_100000000", 100_000_000, 14, 0.02},
+		{"very_large_1000000000", 1_000_000_000, 14, 0.02},
 		{"low_precision_1000", 1000, 10, 0.10},
 		{"high_precision_1000", 1000, 16, 0.03},
 	}
@@ -119,20 +122,20 @@ func TestCardinalityEstimation(t *testing.T) {
 			ull := MustNew(tt.precision)
 			rng := rand.New(rand.NewPCG(42, 12345))
 
-			uniq := make(map[uint64]struct{})
-
+			// We assume the RNG produces unique values for this test. In
+			// practice, collisions may occur, but with a good RNG and a large
+			// range, it should be negligible for our test sizes.
 			for range tt.n {
-				val := rng.Uint64()
-				uniq[val] = struct{}{}
-				ull.Add(val)
+				ull.Add(rng.Uint64())
 			}
 
 			estimate := ull.Count()
-			error := math.Abs(float64(estimate)-float64(len(uniq))) / float64(len(uniq))
+			error := math.Abs(float64(estimate)-float64(tt.n)) / float64(tt.n)
 
+			t.Logf("estimate = %d, actual = %d, error = %.2f%%", estimate, tt.n, error*100)
 			if error > tt.tolerance {
 				t.Errorf("estimate = %d, actual = %d, error = %.2f%%, tolerance = %.2f%%",
-					estimate, len(uniq), error*100, tt.tolerance*100)
+					estimate, tt.n, error*100, tt.tolerance*100)
 			}
 		})
 	}
