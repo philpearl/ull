@@ -7,10 +7,6 @@ func mergeRegisters(dst, src []byte) {
 			continue
 		}
 		dstVal := dst[i]
-		if dstVal == 0 {
-			dst[i] = val
-			continue
-		}
 		dst[i] = pack(unpack(val) | unpack(dstVal))
 	}
 }

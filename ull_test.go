@@ -337,13 +337,19 @@ func TestRegisterValue(t *testing.T) {
 		nlz      int
 		expected uint8
 	}{
-		{old: 0, nlz: 0, expected: 1 << 2},
-		{old: 0, nlz: 1, expected: 2 << 2},
-		{old: 0, nlz: 2, expected: 3 << 2},
-		{old: 1 << 2, nlz: 1, expected: 2<<2 | 0b10},
-		{old: 1<<2 | 0b01, nlz: 1, expected: 2<<2 | 0b10},
-		{old: 1<<2 | 0b10, nlz: 1, expected: 2<<2 | 0b11},
-		{old: 1<<2 | 0b10, nlz: 0, expected: 1<<2 | 0b10},
+		{old: 0, nlz: 0, expected: 2 << 2},
+		{old: 0, nlz: 1, expected: 3 << 2},
+		{old: 0, nlz: 2, expected: 4 << 2},
+		{old: 2 << 2, nlz: 1, expected: 3<<2 | 0b10},
+		{old: 2<<2 | 0b01, nlz: 1, expected: 3<<2 | 0b10},
+		{old: 2<<2 | 0b10, nlz: 1, expected: 3<<2 | 0b11},
+		{old: 2<<2 | 0b10, nlz: 0, expected: 2<<2 | 0b10},
+		// Can't get a register value much higher than this with a 14 bit precision.
+		// This is 208.
+		{old: 0, nlz: 64 - 14, expected: 0b1101_0000},
+		// Smallest precision allowed is 4, so we can get up to 60 leading zeros.
+		// This is 248.
+		{old: 0, nlz: 60, expected: 0b1111_1000},
 	}
 
 	for _, tt := range tests {
@@ -362,19 +368,19 @@ func TestPack(t *testing.T) {
 		expected uint8
 	}{
 		// {reg: 0x0000_0000_0000_0000, expected: 0b0000_0100}, // TODO: is this right??
-		{reg: 0x8000_0000_0000_0000, expected: 62 << 2},
-		{reg: 0xC000_0000_0000_0000, expected: 62<<2 | 0b10},
-		{reg: 0x4000_0000_0000_0000, expected: 61 << 2},
-		{reg: 0x2000_0000_0000_0000, expected: 60 << 2},
-		{reg: 0x1000_0000_0000_0000, expected: 59 << 2},
-		{reg: 0x0800_0000_0000_0000, expected: 58 << 2},
-		{reg: 0x0400_0000_0000_0000, expected: 57 << 2},
-		{reg: 0x0500_0000_0000_0000, expected: 57<<2 | 0b01},
-		{reg: 0x0600_0000_0000_0000, expected: 57<<2 | 0b10},
-		{reg: 0x0700_0000_0000_0000, expected: 57<<2 | 0b11},
-		{reg: 0x0000_0000_0000_0100, expected: 7 << 2},
-		{reg: 0x0000_0000_0000_0004, expected: 1 << 2},
-		{reg: 0x0000_0000_0000_0008, expected: 2 << 2},
+		{reg: 0x8000_0000_0000_0000, expected: 63 << 2},
+		{reg: 0xC000_0000_0000_0000, expected: 63<<2 | 0b10},
+		{reg: 0x4000_0000_0000_0000, expected: 62 << 2},
+		{reg: 0x2000_0000_0000_0000, expected: 61 << 2},
+		{reg: 0x1000_0000_0000_0000, expected: 60 << 2},
+		{reg: 0x0800_0000_0000_0000, expected: 59 << 2},
+		{reg: 0x0400_0000_0000_0000, expected: 58 << 2},
+		{reg: 0x0500_0000_0000_0000, expected: 58<<2 | 0b01},
+		{reg: 0x0600_0000_0000_0000, expected: 58<<2 | 0b10},
+		{reg: 0x0700_0000_0000_0000, expected: 58<<2 | 0b11},
+		{reg: 0x0000_0000_0000_0100, expected: 8 << 2},
+		{reg: 0x0000_0000_0000_0004, expected: 2 << 2},
+		{reg: 0x0000_0000_0000_0008, expected: 3 << 2},
 	}
 
 	for _, tt := range tests {
@@ -393,13 +399,13 @@ func TestUnpack(t *testing.T) {
 		expected uint64
 	}{
 		{packed: 0b0000_0000, expected: 0},
-		{packed: 62 << 2, expected: 0x8000_0000_0000_0000},
-		{packed: 62<<2 | 0b10, expected: 0xC000_0000_0000_0000},
-		{packed: 61 << 2, expected: 0x4000_0000_0000_0000},
-		{packed: 60 << 2, expected: 0x2000_0000_0000_0000},
-		{packed: 59 << 2, expected: 0x1000_0000_0000_0000},
-		{packed: 58 << 2, expected: 0x0800_0000_0000_0000},
-		{packed: 57 << 2, expected: 0x0400_0000_0000_0000},
+		{packed: 62 << 2, expected: 0x4000_0000_0000_0000},
+		{packed: 62<<2 | 0b10, expected: 0x6000_0000_0000_0000},
+		{packed: 61 << 2, expected: 0x2000_0000_0000_0000},
+		{packed: 60 << 2, expected: 0x1000_0000_0000_0000},
+		{packed: 59 << 2, expected: 0x0800_0000_0000_0000},
+		{packed: 58 << 2, expected: 0x0400_0000_0000_0000},
+		{packed: 57 << 2, expected: 0x0200_0000_0000_0000},
 	}
 
 	for _, tt := range tests {

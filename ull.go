@@ -86,8 +86,10 @@ func registerValue(old uint8, nlz int) uint8 {
 // leading zeros, then a 1 followed by some additional bits that represent
 // whether we saw entries with fewer leading zeros!
 func pack(reg uint64) uint8 {
-	u := 62 - bits.LeadingZeros64(reg)
-	return uint8(u<<2) | uint8((reg>>(u-1))&3)
+	nlz := bits.LeadingZeros64(reg) + 1 // 1..=64
+	s := uint32(nlz & 63)
+	y := uint8((reg << s) >> 62)
+	return uint8(((-int32(nlz)) << 2) | int32(y))
 }
 
 // unpack decodes a register value back into a uint64 with an appropriate number
@@ -96,8 +98,9 @@ func unpack(val uint8) uint64 {
 	if val < 4 {
 		return 0
 	}
-	u := val >> 2
-	return (0b100 | uint64(val&3)) << (u - 1)
+
+	sh := (uint32(val>>2) - 2) & 63
+	return (4 | uint64(val&3)) << sh
 }
 
 // AddBytes adds a byte slice to the UltraLogLog using xxhash.
