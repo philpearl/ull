@@ -63,22 +63,22 @@ func MustNew(precision uint8) *UltraLogLog {
 // The hash should be a high-quality hash of the original value.
 func (u *UltraLogLog) Add(hash uint64) {
 	// Use the first `precision` bits to determine the bucket index
-	idx := hash >> (64 - u.precision)
-	// Count leading zeros in the remaining bits
-	nlz := bits.LeadingZeros64(hash<<u.precision) + 1
+	p := u.precision
+	q := 64 - p
+	idx := hash >> q
+
+	// nlz = number of leading zeros in ~(~hash << p)
+	// This finds the position of the first 0 bit after the index portion
+	nlz := bits.LeadingZeros64(^(^hash << p))
 
 	old := u.registers[idx]
 
-	u.registers[idx] = registerValue(old, nlz)
-}
+	// Compute bit position: (nlz + p - 1) mod 64
+	bitpos := (uint(nlz) + uint(p) - 1) & 63
+	hp := unpack(old)
+	hp |= 1 << bitpos
 
-// registerValue computes the new register value.
-func registerValue(old uint8, nlz int) uint8 {
-	oldVal := unpack(old)
-
-	// Set the leading 1 bit for the new nlz value
-	regVal := oldVal | (1 << (nlz + 2))
-	return pack(regVal)
+	u.registers[idx] = pack(hp)
 }
 
 // pack encodes a uint64 register value into a single byte. The uint64 register
@@ -86,6 +86,9 @@ func registerValue(old uint8, nlz int) uint8 {
 // leading zeros, then a 1 followed by some additional bits that represent
 // whether we saw entries with fewer leading zeros!
 func pack(reg uint64) uint8 {
+	if reg == 0 {
+		return 0
+	}
 	nlz := bits.LeadingZeros64(reg) + 1 // 1..=64
 	s := uint32(nlz & 63)
 	y := uint8((reg << s) >> 62)
@@ -95,11 +98,11 @@ func pack(reg uint64) uint8 {
 // unpack decodes a register value back into a uint64 with an appropriate number
 // of leading zeros, then a 1 followed by the additional bits
 func unpack(val uint8) uint64 {
-	if val < 4 {
+	if val == 0 {
 		return 0
 	}
 
-	sh := (uint32(val>>2) - 2) & 63
+	sh := ((uint32(val>>2) - 2) & 63)
 	return (4 | uint64(val&3)) << sh
 }
 
@@ -116,57 +119,6 @@ func (u *UltraLogLog) AddString(s string) {
 // Count returns the estimated cardinality of the set.
 func (u *UltraLogLog) Count() uint64 {
 	return u.FGRAEstimate()
-}
-
-func (u *UltraLogLog) FGRAEstimate() uint64 {
-	// m := float64(len(u.registers))
-
-	var sum float64
-	var c0, c4, c8, c10, c4w, c4w1, c4w2, c4w3 int
-
-	w := 65 - u.precision
-
-	g := func(reg uint8) float64 {
-		return 0
-	}
-
-	for _, reg := range u.registers {
-		if reg < 12 {
-			switch reg {
-			case 0:
-				c0++
-			case 4:
-				c4++
-			case 8:
-				c8++
-			case 10:
-				c10++
-			}
-		} else if reg < 4*w {
-			sum += g(reg)
-		} else {
-			switch reg {
-			case 4 * w:
-				c4w++
-			case 4*w + 1:
-				c4w1++
-			case 4*w + 2:
-				c4w2++
-			case 4*w + 3:
-				c4w3++
-			}
-		}
-	}
-
-	// if csum := c0 + c4 + c8 + c10; csum > 0 {
-	// 	alpha := m + 3*csum
-	// 	β := m - c0 - c4
-	// 	gamma := 4*c0 + 2*c4 + 3*c8 + c10
-	// 	z := math.Pow((math.Sqrt(β*β+4*alpha*gamma)-β)/(2*alpha), 4)
-
-	// }
-
-	return 0
 }
 
 // Merge combines another UltraLogLog into this one.

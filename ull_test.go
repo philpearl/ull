@@ -109,6 +109,7 @@ func TestCardinalityEstimation(t *testing.T) {
 		{"medium_1000", 1000, 14, 0.05},
 		{"large_10000", 10000, 14, 0.03},
 		{"very_large_100000", 100000, 14, 0.02},
+		{"very_large_1000000", 1000000, 14, 0.02},
 		{"low_precision_1000", 1000, 10, 0.10},
 		{"high_precision_1000", 1000, 16, 0.03},
 	}
@@ -118,16 +119,20 @@ func TestCardinalityEstimation(t *testing.T) {
 			ull := MustNew(tt.precision)
 			rng := rand.New(rand.NewPCG(42, 12345))
 
-			for i := 0; i < tt.n; i++ {
-				ull.Add(rng.Uint64())
+			uniq := make(map[uint64]struct{})
+
+			for range tt.n {
+				val := rng.Uint64()
+				uniq[val] = struct{}{}
+				ull.Add(val)
 			}
 
 			estimate := ull.Count()
-			error := math.Abs(float64(estimate)-float64(tt.n)) / float64(tt.n)
+			error := math.Abs(float64(estimate)-float64(len(uniq))) / float64(len(uniq))
 
 			if error > tt.tolerance {
 				t.Errorf("estimate = %d, actual = %d, error = %.2f%%, tolerance = %.2f%%",
-					estimate, tt.n, error*100, tt.tolerance*100)
+					estimate, len(uniq), error*100, tt.tolerance*100)
 			}
 		})
 	}
@@ -326,37 +331,6 @@ func TestUnmarshalErrors(t *testing.T) {
 			ull := &UltraLogLog{}
 			if err := ull.UnmarshalBinary(tt.data); err == nil {
 				t.Error("expected error, got nil")
-			}
-		})
-	}
-}
-
-func TestRegisterValue(t *testing.T) {
-	tests := []struct {
-		old      uint8
-		nlz      int
-		expected uint8
-	}{
-		{old: 0, nlz: 0, expected: 2 << 2},
-		{old: 0, nlz: 1, expected: 3 << 2},
-		{old: 0, nlz: 2, expected: 4 << 2},
-		{old: 2 << 2, nlz: 1, expected: 3<<2 | 0b10},
-		{old: 2<<2 | 0b01, nlz: 1, expected: 3<<2 | 0b10},
-		{old: 2<<2 | 0b10, nlz: 1, expected: 3<<2 | 0b11},
-		{old: 2<<2 | 0b10, nlz: 0, expected: 2<<2 | 0b10},
-		// Can't get a register value much higher than this with a 14 bit precision.
-		// This is 208.
-		{old: 0, nlz: 64 - 14, expected: 0b1101_0000},
-		// Smallest precision allowed is 4, so we can get up to 60 leading zeros.
-		// This is 248.
-		{old: 0, nlz: 60, expected: 0b1111_1000},
-	}
-
-	for _, tt := range tests {
-		t.Run(fmt.Sprintf("%b-%d", tt.old, tt.nlz), func(t *testing.T) {
-			result := registerValue(tt.old, tt.nlz)
-			if result != tt.expected {
-				t.Errorf("registerValue(%.8b, %d) = %.8b, want %.8b", tt.old, tt.nlz, result, tt.expected)
 			}
 		})
 	}
